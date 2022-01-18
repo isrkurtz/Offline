@@ -121,6 +121,9 @@ namespace mu2e {
                             placePV,
                             doSurfaceCheck
                             );
+                            
+      std::cout << __func__ << ": " << targetMotherName << " center in Mu2e = " << target->centerInMu2e() + relPosFake << std::endl; //added
+                            
     } else { //if going to overlap, make a conic section mother volume
       //simply follow the OPA with a small gap
       double motherParams[7] = {0., rAtZClosest-0.001,
@@ -141,6 +144,8 @@ namespace mu2e {
                             placePV,
                             doSurfaceCheck
                             );
+                            
+      std::cout << __func__ << ": " << targetMotherName << " center in Mu2e = " << target->centerInMu2e() + relPosFake << std::endl; //added
 
     }
 

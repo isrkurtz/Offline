@@ -3,6 +3,7 @@
 
 #include "Offline/Mu2eG4/geom/stoppingTargetHoles_DOE_review_2017.txt"
 
+//reference stopping target position in docdb-1383
 // last thickness given will be repeated up to number radii.size()
 vector<double> stoppingTarget.halfThicknesses  =
   { 0.0528 }; //0.1056 mm full thickness (docdb-31396 slide 24)

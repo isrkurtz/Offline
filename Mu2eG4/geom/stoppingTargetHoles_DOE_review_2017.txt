@@ -5,6 +5,8 @@
 
 // Version 1 FROZEN: M. MacKenzie, May 2020
 
+//reference docdb-1383 for stopping target position
+
 #include "Offline/Mu2eG4/geom/stoppingTarget_CD3C_34foils.txt"
 
 double stoppingTarget.holeRadius = 21.5;

@@ -52,8 +52,8 @@ string stm.shieldingHolePoly.material            = "Polyethylene094";
 bool   stm.FOVcollimator.liner.build            =  false; //remove the poly liner
 double stm.FOVcollimator.liner.cutOutHalfLength =    0.0; //no region with rectangular cut-out
 double stm.FOVcollimator.UpStrSpace             =    3.0; //gap between magnet and FOV collimator
-double stm.FOVcollimator.halfWidth              =  171.45; //149.45; //match the sweeper magnet
-double stm.FOVcollimator.halfHeight             =  171.45; //247.45;
+double stm.FOVcollimator.halfWidth              =  177.8; //171.45; //149.45; //match the sweeper magnet
+double stm.FOVcollimator.halfHeight             =  177.8; //171.45; //247.45;
 double stm.FOVcollimator.halfLength             =   63.5;
 double stm.FOVcollimator.hole1.radiusUpStr      =   71.0; //make it a cylindrical hole, so both radii are the same
 double stm.FOVcollimator.hole1.radiusDnStr      =   71.0;
@@ -72,11 +72,11 @@ string stm.FOVcollimator.plug.material   = "Polyethylene094";
 // CRV shield pipe + mating block
 
 double stm.shield.rIn                  = 139.70; //leave this
-double stm.shield.rOut                 = 171.45; //leave this
+double stm.shield.rOut                 = 177.8; //171.45; //leave this
 bool   stm.shield.hasLiner             = false; //don't build the poly liner in the CRV shield pipe
 double stm.shield.widthLiner           = 0.0;
 string stm.shield.material             = "Steel";
-double stm.shield.pipe.halfLength      = 838.2; //254.0; //extend this to be halfway btwn current endpoint and fov collimator
+double stm.shield.pipe.halfLength      = 812.8; //838.2; //254.0; //extend this to be halfway btwn current endpoint and fov collimator minus 50.8 mm distance that pipe is separated from wall
 bool   stm.shield.matchPipeBlock       = true; //position the mating block based on the pipe position/length
 double stm.shield.DnStrWall.holeRadius = 184.21; //added 10um to prevent an overlap with the shield pipe
 double stm.shield.DnStrWall.halfLength =  0.0000001; //25.40; //DnStrWall = mating block between CRV shield pipe and the magnet
@@ -85,24 +85,24 @@ double stm.shield.DnStrWall.halfWidth  = 0.0000001; //197.485;
 // double stm.shield.DnStrWall.halfHeight = 247.45; //match to the magnet
 // double stm.shield.DnStrWall.halfWidth  = 149.45;
 double stm.shield.DnStrWall.gap        = 0.10; //add small gap between the mating block and the magnet
-double stm.shield.UpStrWall.gap        = 284.25; //-223.75; //position is based on CRV, not shielding, so correct by adjusting the gap so the gap is ~50 +-20 um (measured in ROOT viewer)
+double stm.shield.UpStrWall.gap        = -198.35; //-172.95; //-223.75; //position is based on CRV, not shielding, so correct by adjusting the gap so the gap is ~50 +-20 um (measured in ROOT viewer)
 string stm.shield.DnStrWall.material   = "StainlessSteel"; //Stainless steel, not steel like the other components
 
 /////////////////////////////////////////////////////////////////////////////////////
 //Adding hole vd in shield pipe for vd 86
 int stm.verbosityLevel = 0;
-bool vd.STMUpStrHole.build = true;
-bool   vd.STMUpStr.build     = true; //VD86 Rectangle in x-y plane, same size as the CRV (1mm dnStr of CRV)
-bool   vd.STMMagDnStr.build  = true; //VD87 Rectangle in x-y plane, same size as the CRV
-bool   vd.STMSSCollUpStr.build = true; //VD101 Disk upstream of Spot-Size collimator
+bool vd.STMUpStrHole.build = false; //true;
+bool   vd.STMUpStr.build     = false; //true; //VD86 Rectangle in x-y plane, same size as the CRV (1mm dnStr of CRV)
+bool   vd.STMMagDnStr.build  = false; //true; //VD87 Rectangle in x-y plane, same size as the CRV
+bool   vd.STMSSCollUpStr.build = false; //true; //VD101 Disk upstream of Spot-Size collimator
 double vd.STMSSCollUpStr.r     = 200.0;// r=20cm 
-bool   vd.STMCollDnStr.build = true; //VD88 Disk downstream of Spot-Size collimator
+bool   vd.STMCollDnStr.build = false; //true; //VD88 Disk downstream of Spot-Size collimator
 double vd.STMCollDnStr.r     = 200.0;// r=20cm 
-bool   vd.STMDet1UpStr.build = true; //VD89 Disk in x-y plane, same size as the Ge detector 1
-bool   vd.STMDet2UpStr.build = true; //VD90 Disk in x-y plane, same size as the Ge detector 2
-bool   vd.STMFieldOfViewCollDnStr.build = true; //VD100
+bool   vd.STMDet1UpStr.build = false; //true; //VD89 Disk in x-y plane, same size as the Ge detector 1
+bool   vd.STMDet2UpStr.build = false; //true; //VD90 Disk in x-y plane, same size as the Ge detector 2
+bool   vd.STMFieldOfViewCollDnStr.build = false; //true; //VD100
 // build virtual detector inside DS Neutron Shielding
-bool   vd.DSNeutronShieldExit.build = true; //VD81
+bool   vd.DSNeutronShieldExit.build = false; //true; //VD81
 double vd.DSNeutronShieldExit.r     =  110.0;//Must be the same as the following 2 values,
 
 

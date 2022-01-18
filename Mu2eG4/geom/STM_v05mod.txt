@@ -3,17 +3,19 @@
 
 #include "Offline/Mu2eG4/geom/STM_v04.txt"
 
-string stm.magnet.material             = "StainlessSteel"; //FIXME: Should be just steel, need new material
-double stm.magnet.halfLength           =  584.2;
-double stm.magnet.halfWidth            =  197.485;
-double stm.magnet.halfHeight           =  244.475;
-double stm.magnet.holeHalfHeight       =  203.0;  // 12 inch high hole
-double stm.magnet.holeHalfWidth        =  105.0;  // this must be larger than stm.pipe.rOut
-double stm.magnet.holeXOffset          =  0.0;
-double stm.magnet.holeYOffset          = -2.921; //-20.835; //top of the yoke is thicker than the bottom
-bool   stm.magnet.hasLiner             =  false; //turn off the poly liner
-bool   stm.magnet.usePipeAsOrigin      =  true; //place magnet based on pipe wrt shield wall
-bool   stm.magnet.centerHole           =  true; //place the hole center along viewing axis
+bool   stm.magnet.build                = false;
+
+//string stm.magnet.material             = "StainlessSteel"; //FIXME: Should be just steel, need new material
+//double stm.magnet.halfLength           =  584.2;
+//double stm.magnet.halfWidth            =  197.485;
+//double stm.magnet.halfHeight           =  244.475;
+//double stm.magnet.holeHalfHeight       =  203.0;  // 12 inch high hole
+//double stm.magnet.holeHalfWidth        =  105.0;  // this must be larger than stm.pipe.rOut
+//double stm.magnet.holeXOffset          =  0.0;
+//double stm.magnet.holeYOffset          = -2.921; //-20.835; //top of the yoke is thicker than the bottom
+//bool   stm.magnet.hasLiner             =  false; //turn off the poly liner
+//bool   stm.magnet.usePipeAsOrigin      =  true; //place magnet based on pipe wrt shield wall
+//bool   stm.magnet.centerHole           =  true; //place the hole center along viewing axis
 
 //turn off the support table material
 string stm.magnet.stand.material       = "G4_AIR";
@@ -57,7 +59,7 @@ double stm.shield.rOut                 = 184.20; //leave this
 bool   stm.shield.hasLiner             = false; //don't build the poly liner in the CRV shield pipe
 double stm.shield.widthLiner           = 0.0;
 string stm.shield.material             = "StainlessSteel"; //FIXME: Should be just steel, need new material
-double stm.shield.pipe.halfLength      = 254.0; //extend this to be halfway btwn current endpoint and fov collimator
+double stm.shield.pipe.halfLength      = 838.2; //254.0; //extend this to be halfway btwn current endpoint and fov collimator
 bool   stm.shield.matchPipeBlock       = true;
 double stm.shield.DnStrWall.holeRadius = 184.21; //added 10um to prevent an overlap with the shield pipe
 double stm.shield.DnStrWall.halfLength =  25.40;

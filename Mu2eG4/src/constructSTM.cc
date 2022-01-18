@@ -126,23 +126,26 @@ namespace mu2e {
     G4ThreeVector stmMagnetPositionInParent = pSTMMagnetParams.originInMu2e() - parentCenterInMu2e;
 
     // Make the magnet
-    G4Box* boxMagnet     = new G4Box("boxMagnet",
-                                     pSTMMagnetParams.xHalfLength(),
-                                     pSTMMagnetParams.yHalfLength(),
-                                     pSTMMagnetParams.zHalfLength());
-
+    G4Box *boxMagnet, *boxMagnetHole;
+    VolumeInfo stmMagnet;
+    stmMagnet.name = "stmMagnet";
     // Make the rectangular window (make the box that gets subtracted just a bit longer to be sure there are no edge effects)
     const double stmMagnetHoleHalfLengths[3] = {pSTMMagnetParams.xHoleHalfLength(),
                                                 pSTMMagnetParams.yHoleHalfLength(),
                                                 pSTMMagnetParams.zHalfLength()     };
-    G4Box* boxMagnetHole = new G4Box("boxMagnetHole",
-                                     stmMagnetHoleHalfLengths[0]+pSTMShieldPipeParams.linerWidth(),
-                                     stmMagnetHoleHalfLengths[1]+pSTMShieldPipeParams.linerWidth(),
-                                     stmMagnetHoleHalfLengths[2]+1.0);
+    if(pSTMMagnetParams.build()) {
+      boxMagnet = new G4Box("boxMagnet",
+                            pSTMMagnetParams.xHalfLength(),
+                            pSTMMagnetParams.yHalfLength(),
+                            pSTMMagnetParams.zHalfLength());
 
-    VolumeInfo stmMagnet;
-    stmMagnet.name = "stmMagnet";
-    stmMagnet.solid = new G4SubtractionSolid(stmMagnet.name,boxMagnet,boxMagnetHole,0,pSTMMagnetParams.holeOffset());
+      boxMagnetHole = new G4Box("boxMagnetHole",
+                                stmMagnetHoleHalfLengths[0]+pSTMShieldPipeParams.linerWidth(),
+                                stmMagnetHoleHalfLengths[1]+pSTMShieldPipeParams.linerWidth(),
+                                stmMagnetHoleHalfLengths[2]+1.0);
+
+      stmMagnet.solid = new G4SubtractionSolid(stmMagnet.name,boxMagnet,boxMagnetHole,0,pSTMMagnetParams.holeOffset());
+    }
 
     // Make the poly-liner
     G4Box* boxMagnetPLine;
@@ -202,9 +205,10 @@ namespace mu2e {
 
     if ( verbosityLevel > 0) {
        cout << __func__ << " Sweeper magnet extent in z   : "
-            << pSTMMagnetParams.zBegin() <<","<< pSTMMagnetParams.zEnd() << endl;
-       cout << __func__ << " Sweeper magnet hole opening xHalfLength : "<< stmMagnetHoleHalfLengths[0] << endl;
-       cout << __func__ << " Sweeper magnet hole opening yHalfLength : "<< stmMagnetHoleHalfLengths[1] << endl;
+            << pSTMMagnetParams.zBegin() <<","<< pSTMMagnetParams.zEnd() << endl
+            << __func__ << " Sweeper magnet hole opening xHalfLength : "<< stmMagnetHoleHalfLengths[0] << endl
+            << __func__ << " Sweeper magnet hole opening yHalfLength : "<< stmMagnetHoleHalfLengths[1] << endl
+            << __func__ << " Build sweeper magnet = " << pSTMMagnetParams.build() << endl;
     }
 
 
@@ -307,141 +311,139 @@ namespace mu2e {
 
     const double flangeHalfLength      =     pSTMTransportPipeParams.flangeHalfLength();
     const double flangeFullLength      = 2.0*pSTMTransportPipeParams.flangeHalfLength();
+    G4Tubs *aPipeCenterTub, *aPipeCenterGasTub, *aPipeDnStrTub, *aPipeDnStrSubtTub;
+    VolumeInfo pipeCenterTubInfo, pipeCenterGasTubInfo;
+    if(pSTMTransportPipeParams.build()) {
+      //make the region of pipe that will contain the magnetic field
+      aPipeCenterTub = new G4Tubs("aPipeCenterTub",
+                                  pSTMTransportPipeParams.radiusIn(),  //inner radius
+                                  pSTMTransportPipeParams.radiusOut(), //outer radius
+                                  stmMagnetHoleHalfLengths[2],
+                                  0.0,
+                                  CLHEP::twopi);
+      pipeCenterTubInfo.name = "pipeCenterTub";
+      pipeCenterTubInfo.solid = aPipeCenterTub;
 
-    //make the region of pipe that will contain the magnetic field
-    G4Tubs* aPipeCenterTub = new G4Tubs("aPipeCenterTub",
-                                        pSTMTransportPipeParams.radiusIn(),  //inner radius
-                                        pSTMTransportPipeParams.radiusOut(), //outer radius
-                                        stmMagnetHoleHalfLengths[2],
-                                        0.0,
-                                        CLHEP::twopi);
+      //make the gas that goes inside the region of pipe that contains the magnetic field
+      aPipeCenterGasTub = new G4Tubs("aPipeCenterGasTub",
+                                     0.0, //inner radius of gas
+                                     pSTMTransportPipeParams.radiusIn(), //outer radius of gas
+                                     stmMagnetHoleHalfLengths[2],
+                                     0.0,
+                                     CLHEP::twopi);
+      pipeCenterGasTubInfo.name = "pipeGasTub";
+      pipeCenterGasTubInfo.solid = aPipeCenterGasTub;
 
-    VolumeInfo pipeCenterTubInfo;
-    pipeCenterTubInfo.name = "pipeCenterTub";
-    pipeCenterTubInfo.solid = aPipeCenterTub;
+      //make the region of pipe that goes downstream of the magnetic field, with a flange
+      aPipeDnStrTub = new G4Tubs("aPipeDnStrTub",
+                                 pSTMTransportPipeParams.radiusIn(),  //inner radius
+                                 pSTMTransportPipeParams.radiusOut()+pSTMTransportPipeParams.flangeOverhangR(), //outer radius
+                                 pSTMTransportPipeParams.dnStrHalflength(),
+                                 0.0,
+                                 CLHEP::twopi);
+      aPipeDnStrSubtTub = new G4Tubs("aPipeDnStrSubtTub",
+                                     pSTMTransportPipeParams.radiusOut(), //inner radius to subtract
+                                     pSTMTransportPipeParams.radiusOut()+2.0*pSTMTransportPipeParams.flangeOverhangR(), //outer radius, make sure to subtract enough
+                                     pSTMTransportPipeParams.dnStrHalflength(),
+                                     0.0,
+                                     CLHEP::twopi);
+      CLHEP::Hep3Vector flangeOffset(0.0, 0.0, -flangeFullLength);
+      VolumeInfo pipeDnStrTubInfo;
+      pipeDnStrTubInfo.name = "pipeDnStrTub";
+      pipeDnStrTubInfo.solid = new G4SubtractionSolid(pipeDnStrTubInfo.name,aPipeDnStrTub, aPipeDnStrSubtTub, 0, flangeOffset);
+      CLHEP::Hep3Vector pipeDnStrOffset(0.0, 0.0, stmMagnetHoleHalfLengths[2]+pSTMTransportPipeParams.dnStrHalflength());
 
-    //make the gas that goes inside the region of pipe that contains the magnetic field
-    G4Tubs* aPipeCenterGasTub = new G4Tubs("aPipeCenterGasTub",
-                                           0.0, //inner radius of gas
-                                           pSTMTransportPipeParams.radiusIn(), //outer radius of gas
-                                           stmMagnetHoleHalfLengths[2],
-                                           0.0,
-                                           CLHEP::twopi);
-    VolumeInfo pipeCenterGasTubInfo;
-    pipeCenterGasTubInfo.name = "pipeGasTub";
-    pipeCenterGasTubInfo.solid = aPipeCenterGasTub;
+      //make a downstream window to hold the helium or vacuum inside the pipe
+      G4Tubs* aPipeDnStrWindowTub = new G4Tubs( "aPipeDnStrWindowTub",
+                                                0.0, // inner radius of window
+                                                pSTMTransportPipeParams.radiusIn(), //outer radius of window
+                                                pSTMTransportPipeParams.dnStrWindowHalflength(),
+                                                0.0,
+                                                CLHEP::twopi);
+      VolumeInfo pipeDnStrWindowTubInfo;
+      pipeDnStrWindowTubInfo.name = "pipeDnStrWindowTub";
+      pipeDnStrWindowTubInfo.solid = aPipeDnStrWindowTub;
+      CLHEP::Hep3Vector pipeDnStrWindowOffset(0.0, 0.0, stmMagnetHoleHalfLengths[2]+2.0*pSTMTransportPipeParams.dnStrHalflength()-flangeHalfLength);
 
-    //make the region of pipe that goes downstream of the magnetic field, with a flange
-    G4Tubs* aPipeDnStrTub = new G4Tubs("aPipeDnStrTub",
-                                       pSTMTransportPipeParams.radiusIn(),  //inner radius
-                                       pSTMTransportPipeParams.radiusOut()+pSTMTransportPipeParams.flangeOverhangR(), //outer radius
-                                       pSTMTransportPipeParams.dnStrHalflength(),
-                                       0.0,
-                                       CLHEP::twopi);
-    G4Tubs* aPipeDnStrSubtTub = new G4Tubs("aPipeDnStrSubtTub",
-                                           pSTMTransportPipeParams.radiusOut(), //inner radius to subtract
-                                           pSTMTransportPipeParams.radiusOut()+2.0*pSTMTransportPipeParams.flangeOverhangR(), //outer radius, make sure to subtract enough
-                                           pSTMTransportPipeParams.dnStrHalflength(),
-                                           0.0,
-                                           CLHEP::twopi);
-    CLHEP::Hep3Vector flangeOffset(0.0, 0.0, -flangeFullLength);
-    VolumeInfo pipeDnStrTubInfo;
-    pipeDnStrTubInfo.name = "pipeDnStrTub";
-    pipeDnStrTubInfo.solid = new G4SubtractionSolid(pipeDnStrTubInfo.name,aPipeDnStrTub, aPipeDnStrSubtTub, 0, flangeOffset);
-    CLHEP::Hep3Vector pipeDnStrOffset(0.0, 0.0, stmMagnetHoleHalfLengths[2]+pSTMTransportPipeParams.dnStrHalflength());
+      //put gas/vacuum inside the downstream portion of the pipe
+      const double gasDnStrHalfLength = 0.5*(2.0*pSTMTransportPipeParams.dnStrHalflength() - flangeHalfLength - pSTMTransportPipeParams.dnStrWindowHalflength() );
+      G4Tubs* aPipeGasDnStrTub = new G4Tubs( "aPipeGasDnStrTub",
+                                             0.0, //inner radius
+                                             pSTMTransportPipeParams.radiusIn(), //outer radius of gas
+                                             gasDnStrHalfLength,
+                                             0.0,
+                                             CLHEP::twopi);
+      VolumeInfo pipeGasDnStrTubInfo;
+      pipeGasDnStrTubInfo.name = "pipeGasDnStrTub";
+      pipeGasDnStrTubInfo.solid = aPipeGasDnStrTub;
+      CLHEP::Hep3Vector pipeGasDnStrOffset(0.0, 0.0, stmMagnetHoleHalfLengths[2]+gasDnStrHalfLength);
 
-    //make a downstream window to hold the helium or vacuum inside the pipe
-    G4Tubs* aPipeDnStrWindowTub = new G4Tubs( "aPipeDnStrWindowTub",
-                                              0.0, // inner radius of window
-                                              pSTMTransportPipeParams.radiusIn(), //outer radius of window
-                                              pSTMTransportPipeParams.dnStrWindowHalflength(),
-                                              0.0,
-                                              CLHEP::twopi);
-    VolumeInfo pipeDnStrWindowTubInfo;
-    pipeDnStrWindowTubInfo.name = "pipeDnStrWindowTub";
-    pipeDnStrWindowTubInfo.solid = aPipeDnStrWindowTub;
-    CLHEP::Hep3Vector pipeDnStrWindowOffset(0.0, 0.0, stmMagnetHoleHalfLengths[2]+2.0*pSTMTransportPipeParams.dnStrHalflength()-flangeHalfLength);
+      //make the region of pipe that goes upstream of the magnetic field, with a flange
+      const double IFB_endplug_z_center     = ds->cryoZMax() + _config.getDouble("ifb.endplug.z");
+      const double IFB_endplug_z_halflength = _config.getDouble("ifb.endplug.halfLength");
+      const double pipeUpStrHalfLength = 0.5*((stmMagnetPositionInMu2e.z()-stmMagnetHoleHalfLengths[2]) - (IFB_endplug_z_center+IFB_endplug_z_halflength)) - pSTMTransportPipeParams.upStrSpace();//leave a space between pipe and IFB
 
-    //put gas/vacuum inside the downstream portion of the pipe
-    const double gasDnStrHalfLength = 0.5*(2.0*pSTMTransportPipeParams.dnStrHalflength() - flangeHalfLength - pSTMTransportPipeParams.dnStrWindowHalflength() );
-    G4Tubs* aPipeGasDnStrTub = new G4Tubs( "aPipeGasDnStrTub",
-                                            0.0, //inner radius
-                                            pSTMTransportPipeParams.radiusIn(), //outer radius of gas
-                                            gasDnStrHalfLength,
-                                            0.0,
-                                            CLHEP::twopi);
-    VolumeInfo pipeGasDnStrTubInfo;
-    pipeGasDnStrTubInfo.name = "pipeGasDnStrTub";
-    pipeGasDnStrTubInfo.solid = aPipeGasDnStrTub;
-    CLHEP::Hep3Vector pipeGasDnStrOffset(0.0, 0.0, stmMagnetHoleHalfLengths[2]+gasDnStrHalfLength);
+      G4Tubs* aPipeUpStrTub     = new G4Tubs("aPipeUpStrTub",
+                                             pSTMTransportPipeParams.radiusIn(), //inner radius
+                                             pSTMTransportPipeParams.radiusOut()+pSTMTransportPipeParams.flangeOverhangR(), //outer radius
+                                             pipeUpStrHalfLength,//
+                                             0.0,//
+                                             CLHEP::twopi);
+      G4Tubs* aPipeUpStrSubtTub = new G4Tubs("aPipeUpStrSubtTub",
+                                             pSTMTransportPipeParams.radiusOut(), //inner radius
+                                             pSTMTransportPipeParams.radiusOut()+2.0*pSTMTransportPipeParams.flangeOverhangR(), //outer radius, make sure to subtract enough
+                                             pipeUpStrHalfLength,//
+                                             0.0,//
+                                             CLHEP::twopi);
+      CLHEP::Hep3Vector pipeUpStrOffset(0.0, 0.0, -stmMagnetHoleHalfLengths[2]-pipeUpStrHalfLength);
+      //first make the subtraction so it has a flange
+      G4SubtractionSolid *pipeUpStrTubTemp1 = new G4SubtractionSolid("pipeUpStrTubTemp1",aPipeUpStrTub, aPipeUpStrSubtTub, 0, -flangeOffset);
 
-    //make the region of pipe that goes upstream of the magnetic field, with a flange
-    const double IFB_endplug_z_center     = ds->cryoZMax() + _config.getDouble("ifb.endplug.z");
-    const double IFB_endplug_z_halflength = _config.getDouble("ifb.endplug.halfLength");
-    const double pipeUpStrHalfLength = 0.5*((stmMagnetPositionInMu2e.z()-stmMagnetHoleHalfLengths[2]) - (IFB_endplug_z_center+IFB_endplug_z_halflength)) - pSTMTransportPipeParams.upStrSpace();//leave a space between pipe and IFB
-
-    G4Tubs* aPipeUpStrTub     = new G4Tubs("aPipeUpStrTub",
-                                           pSTMTransportPipeParams.radiusIn(), //inner radius
-                                           pSTMTransportPipeParams.radiusOut()+pSTMTransportPipeParams.flangeOverhangR(), //outer radius
-                                           pipeUpStrHalfLength,//
-                                           0.0,//
-                                           CLHEP::twopi);
-    G4Tubs* aPipeUpStrSubtTub = new G4Tubs("aPipeUpStrSubtTub",
-                                           pSTMTransportPipeParams.radiusOut(), //inner radius
-                                           pSTMTransportPipeParams.radiusOut()+2.0*pSTMTransportPipeParams.flangeOverhangR(), //outer radius, make sure to subtract enough
-                                           pipeUpStrHalfLength,//
-                                           0.0,//
-                                           CLHEP::twopi);
-    CLHEP::Hep3Vector pipeUpStrOffset(0.0, 0.0, -stmMagnetHoleHalfLengths[2]-pipeUpStrHalfLength);
-    //first make the subtraction so it has a flange
-    G4SubtractionSolid *pipeUpStrTubTemp1 = new G4SubtractionSolid("pipeUpStrTubTemp1",aPipeUpStrTub, aPipeUpStrSubtTub, 0, -flangeOffset);
-
-    //subtract a slice so VDDSNeutronShieldExit can fit through the pipe without overlap
-    CLHEP::Hep3Vector vdDSNeutronShieldExitPositionWRTpipeUpStr = vdDSNeutronShieldExitPositionInMu2e - (stmMagnetPositionInMu2e+pipeUpStrOffset);
-    CLHEP::Hep3Vector vdSTM_UpStrPositionWRTpipeUpStr = vdSTM_UpStrPositionInMu2e - (stmMagnetPositionInMu2e+pipeUpStrOffset);
-    //std::cout<<"vdDSNeutronShieldExitPositionWRTpipe = "<<vdDSNeutronShieldExitPositionWRTpipeUpStr<<std::endl;
-    //std::cout<<"vdSTM_UpStrPositionWRTpipe = "<<vdDSNeutronShieldExitPositionWRTpipeUpStr<<std::endl;
-    G4SubtractionSolid *pipeUpStrTubTemp2 = new G4SubtractionSolid("pipeUpStrTubTemp2",pipeUpStrTubTemp1, aDiskVDDSNeutronShieldExitTub,      0, vdDSNeutronShieldExitPositionWRTpipeUpStr);
-    G4SubtractionSolid *pipeUpStrTubTemp3 = new G4SubtractionSolid("pipeUpStrTubTemp3",pipeUpStrTubTemp2, aDiskVDSTM_UpStrTub,      0, vdSTM_UpStrPositionWRTpipeUpStr);
-    VolumeInfo pipeUpStrTubInfo;
-    pipeUpStrTubInfo.name = "pipeUpStrTub";
-    pipeUpStrTubInfo.solid = pipeUpStrTubTemp3;
-
-
-    //put gas inside the upstream portion of the pipe
-    const double pipeGasUpStrHalfLength = 0.5*(2.0*pipeUpStrHalfLength - flangeHalfLength - pSTMTransportPipeParams.upStrWindowHalflength());
-    G4Tubs* aPipeGasUpStrTub = new G4Tubs( "aPipeGasUpStrTub",
-                                            0.0, //inner radius
-                                            pSTMTransportPipeParams.radiusIn(), //outer radius
-                                            pipeGasUpStrHalfLength,//
-                                            0.0,//
-                                            CLHEP::twopi);
-    CLHEP::Hep3Vector pipeGasUpStrOffset(0.0, 0.0, -stmMagnetHoleHalfLengths[2]-pipeGasUpStrHalfLength);
-    //subtract a slice so VDDSNeutronShieldExit can fit through the pipe without overlap
-    CLHEP::Hep3Vector vdDSNeutronShieldExitPositionWRTpipeGasUpStr = vdDSNeutronShieldExitPositionInMu2e - (stmMagnetPositionInMu2e+pipeGasUpStrOffset);
-    CLHEP::Hep3Vector vdSTM_UpStrPositionWRTpipeGasUpStr = vdSTM_UpStrPositionInMu2e - (stmMagnetPositionInMu2e+pipeGasUpStrOffset);
-    //std::cout<<"vdDSNeutronShieldExitPositionWRTtube = "<<vdDSNeutronShieldExitPositionWRTpipeGasUpStr<<std::endl;
-    //std::cout<<"vdSTM_UpStrPositionWRTtube = "<<vdSTM_UpStrPositionWRTpipeGasUpStr<<std::endl;
-    G4SubtractionSolid *pipeGasUpStrTubTemp1 = new G4SubtractionSolid("pipeGasUpStrTubTemp1",aPipeGasUpStrTub,     aDiskVDDSNeutronShieldExitTub, 0, vdDSNeutronShieldExitPositionWRTpipeGasUpStr);
-    G4SubtractionSolid *pipeGasUpStrTubTemp2 = new G4SubtractionSolid("pipeGasUpStrTubTemp2",pipeGasUpStrTubTemp1, aDiskVDSTM_UpStrTub, 0, vdSTM_UpStrPositionWRTpipeGasUpStr);
-    VolumeInfo pipeGasUpStrTubInfo;
-    pipeGasUpStrTubInfo.name = "pipeGasUpStrTub";
-    pipeGasUpStrTubInfo.solid = pipeGasUpStrTubTemp2;
-
-    //make an upstream window to hold the gas/vacuum in the pipe
-    G4Tubs* aPipeUpStrWindowTub = new G4Tubs( "aPipeUpStrWindowTub",
-                                            0.0, // inner radius
-                                            pSTMTransportPipeParams.radiusIn(), //outer radius of window
-                                            pSTMTransportPipeParams.upStrWindowHalflength(),
-                                            0.0,
-                                            CLHEP::twopi);
-    VolumeInfo pipeUpStrWindowTubInfo;
-    pipeUpStrWindowTubInfo.name = "pipeUpStrWindowTub";
-    pipeUpStrWindowTubInfo.solid = aPipeUpStrWindowTub;
-    CLHEP::Hep3Vector pipeUpStrWindowOffset(0.0, 0.0, -stmMagnetHoleHalfLengths[2]-2.0*pipeUpStrHalfLength+flangeHalfLength);
+      //subtract a slice so VDDSNeutronShieldExit can fit through the pipe without overlap
+      CLHEP::Hep3Vector vdDSNeutronShieldExitPositionWRTpipeUpStr = vdDSNeutronShieldExitPositionInMu2e - (stmMagnetPositionInMu2e+pipeUpStrOffset);
+      CLHEP::Hep3Vector vdSTM_UpStrPositionWRTpipeUpStr = vdSTM_UpStrPositionInMu2e - (stmMagnetPositionInMu2e+pipeUpStrOffset);
+      //std::cout<<"vdDSNeutronShieldExitPositionWRTpipe = "<<vdDSNeutronShieldExitPositionWRTpipeUpStr<<std::endl;
+      //std::cout<<"vdSTM_UpStrPositionWRTpipe = "<<vdDSNeutronShieldExitPositionWRTpipeUpStr<<std::endl;
+      G4SubtractionSolid *pipeUpStrTubTemp2 = new G4SubtractionSolid("pipeUpStrTubTemp2",pipeUpStrTubTemp1, aDiskVDDSNeutronShieldExitTub,      0, vdDSNeutronShieldExitPositionWRTpipeUpStr);
+      G4SubtractionSolid *pipeUpStrTubTemp3 = new G4SubtractionSolid("pipeUpStrTubTemp3",pipeUpStrTubTemp2, aDiskVDSTM_UpStrTub,      0, vdSTM_UpStrPositionWRTpipeUpStr);
+      VolumeInfo pipeUpStrTubInfo;
+      pipeUpStrTubInfo.name = "pipeUpStrTub";
+      pipeUpStrTubInfo.solid = pipeUpStrTubTemp3;
 
 
-    if (pSTMTransportPipeParams.build()){
+      //put gas inside the upstream portion of the pipe
+      const double pipeGasUpStrHalfLength = 0.5*(2.0*pipeUpStrHalfLength - flangeHalfLength - pSTMTransportPipeParams.upStrWindowHalflength());
+      G4Tubs* aPipeGasUpStrTub = new G4Tubs( "aPipeGasUpStrTub",
+                                             0.0, //inner radius
+                                             pSTMTransportPipeParams.radiusIn(), //outer radius
+                                             pipeGasUpStrHalfLength,//
+                                             0.0,//
+                                             CLHEP::twopi);
+      CLHEP::Hep3Vector pipeGasUpStrOffset(0.0, 0.0, -stmMagnetHoleHalfLengths[2]-pipeGasUpStrHalfLength);
+      //subtract a slice so VDDSNeutronShieldExit can fit through the pipe without overlap
+      CLHEP::Hep3Vector vdDSNeutronShieldExitPositionWRTpipeGasUpStr = vdDSNeutronShieldExitPositionInMu2e - (stmMagnetPositionInMu2e+pipeGasUpStrOffset);
+      CLHEP::Hep3Vector vdSTM_UpStrPositionWRTpipeGasUpStr = vdSTM_UpStrPositionInMu2e - (stmMagnetPositionInMu2e+pipeGasUpStrOffset);
+      //std::cout<<"vdDSNeutronShieldExitPositionWRTtube = "<<vdDSNeutronShieldExitPositionWRTpipeGasUpStr<<std::endl;
+      //std::cout<<"vdSTM_UpStrPositionWRTtube = "<<vdSTM_UpStrPositionWRTpipeGasUpStr<<std::endl;
+      G4SubtractionSolid *pipeGasUpStrTubTemp1 = new G4SubtractionSolid("pipeGasUpStrTubTemp1",aPipeGasUpStrTub,     aDiskVDDSNeutronShieldExitTub, 0, vdDSNeutronShieldExitPositionWRTpipeGasUpStr);
+      G4SubtractionSolid *pipeGasUpStrTubTemp2 = new G4SubtractionSolid("pipeGasUpStrTubTemp2",pipeGasUpStrTubTemp1, aDiskVDSTM_UpStrTub, 0, vdSTM_UpStrPositionWRTpipeGasUpStr);
+      VolumeInfo pipeGasUpStrTubInfo;
+      pipeGasUpStrTubInfo.name = "pipeGasUpStrTub";
+      pipeGasUpStrTubInfo.solid = pipeGasUpStrTubTemp2;
+
+      //make an upstream window to hold the gas/vacuum in the pipe
+      G4Tubs* aPipeUpStrWindowTub = new G4Tubs( "aPipeUpStrWindowTub",
+                                                0.0, // inner radius
+                                                pSTMTransportPipeParams.radiusIn(), //outer radius of window
+                                                pSTMTransportPipeParams.upStrWindowHalflength(),
+                                                0.0,
+                                                CLHEP::twopi);
+      VolumeInfo pipeUpStrWindowTubInfo;
+      pipeUpStrWindowTubInfo.name = "pipeUpStrWindowTub";
+      pipeUpStrWindowTubInfo.solid = aPipeUpStrWindowTub;
+      CLHEP::Hep3Vector pipeUpStrWindowOffset(0.0, 0.0, -stmMagnetHoleHalfLengths[2]-2.0*pipeUpStrHalfLength+flangeHalfLength);
+
+
       if (verbosityLevel>0){
         const double pipeTotalHalfLength = pipeUpStrHalfLength+stmMagnetHoleHalfLengths[2]+pSTMTransportPipeParams.dnStrHalflength();
         std::cout<<__func__<<" STM Transport Pipe z_halflength = "<< pipeTotalHalfLength <<std::endl;
@@ -450,109 +452,109 @@ namespace mu2e {
         std::cout<<__func__<<" STM Transport Pipe rIn          = "<< pSTMTransportPipeParams.radiusIn() <<std::endl;
       }
       finishNesting(pipeCenterTubInfo,
-                findMaterialOrThrow(pSTMTransportPipeParams.material()),
-                0x0,
-                stmMagnetPositionInParent,
-                parentInfo.logical,
-                0,
-                STMisVisible,
-                G4Color::Blue(),
-                STMisSolid,
-                forceAuxEdgeVisible,
-                placePV,
-                doSurfaceCheck
-                );
+                    findMaterialOrThrow(pSTMTransportPipeParams.material()),
+                    0x0,
+                    stmMagnetPositionInParent,
+                    parentInfo.logical,
+                    0,
+                    STMisVisible,
+                    G4Color::Blue(),
+                    STMisSolid,
+                    forceAuxEdgeVisible,
+                    placePV,
+                    doSurfaceCheck
+                    );
       finishNesting(pipeCenterGasTubInfo,
-                findMaterialOrThrow(pSTMTransportPipeParams.gasMaterial()),
-                0x0,
-                stmMagnetPositionInParent,
-                parentInfo.logical,
-                0,
-                STMisVisible,
-                G4Color::Blue(),
-                STMisSolid,
-                forceAuxEdgeVisible,
-                placePV,
-                doSurfaceCheck
-                );
+                    findMaterialOrThrow(pSTMTransportPipeParams.gasMaterial()),
+                    0x0,
+                    stmMagnetPositionInParent,
+                    parentInfo.logical,
+                    0,
+                    STMisVisible,
+                    G4Color::Blue(),
+                    STMisSolid,
+                    forceAuxEdgeVisible,
+                    placePV,
+                    doSurfaceCheck
+                    );
       finishNesting(pipeDnStrTubInfo,
-                findMaterialOrThrow(pSTMTransportPipeParams.material()),
-                0x0,
-                stmMagnetPositionInParent+pipeDnStrOffset,
-                parentInfo.logical,
-                0,
-                STMisVisible,
-                G4Color::Blue(),
-                STMisSolid,
-                forceAuxEdgeVisible,
-                placePV,
-                doSurfaceCheck
-                );
+                    findMaterialOrThrow(pSTMTransportPipeParams.material()),
+                    0x0,
+                    stmMagnetPositionInParent+pipeDnStrOffset,
+                    parentInfo.logical,
+                    0,
+                    STMisVisible,
+                    G4Color::Blue(),
+                    STMisSolid,
+                    forceAuxEdgeVisible,
+                    placePV,
+                    doSurfaceCheck
+                    );
       finishNesting(pipeDnStrWindowTubInfo,
-                findMaterialOrThrow(pSTMTransportPipeParams.dnStrWindowMaterial()),
-                0x0,
-                stmMagnetPositionInParent+pipeDnStrWindowOffset,
-                parentInfo.logical,
-                0,
-                STMisVisible,
-                G4Color::Blue(),
-                STMisSolid,
-                forceAuxEdgeVisible,
-                placePV,
-                doSurfaceCheck
-                );
+                    findMaterialOrThrow(pSTMTransportPipeParams.dnStrWindowMaterial()),
+                    0x0,
+                    stmMagnetPositionInParent+pipeDnStrWindowOffset,
+                    parentInfo.logical,
+                    0,
+                    STMisVisible,
+                    G4Color::Blue(),
+                    STMisSolid,
+                    forceAuxEdgeVisible,
+                    placePV,
+                    doSurfaceCheck
+                    );
       finishNesting(pipeGasDnStrTubInfo,
-                findMaterialOrThrow(pSTMTransportPipeParams.gasMaterial()),
-                0x0,
-                stmMagnetPositionInParent+pipeGasDnStrOffset,
-                parentInfo.logical,
-                0,
-                STMisVisible,
-                G4Color::Blue(),
-                STMisSolid,
-                forceAuxEdgeVisible,
-                placePV,
-                doSurfaceCheck
-                );
+                    findMaterialOrThrow(pSTMTransportPipeParams.gasMaterial()),
+                    0x0,
+                    stmMagnetPositionInParent+pipeGasDnStrOffset,
+                    parentInfo.logical,
+                    0,
+                    STMisVisible,
+                    G4Color::Blue(),
+                    STMisSolid,
+                    forceAuxEdgeVisible,
+                    placePV,
+                    doSurfaceCheck
+                    );
       finishNesting(pipeUpStrTubInfo,
-                findMaterialOrThrow(pSTMTransportPipeParams.material()),
-                0x0,
-                stmMagnetPositionInParent+pipeUpStrOffset,
-                parentInfo.logical,
-                0,
-                STMisVisible,
-                G4Color::Blue(),
-                STMisSolid,
-                forceAuxEdgeVisible,
-                placePV,
-                doSurfaceCheck
-                );
+                    findMaterialOrThrow(pSTMTransportPipeParams.material()),
+                    0x0,
+                    stmMagnetPositionInParent+pipeUpStrOffset,
+                    parentInfo.logical,
+                    0,
+                    STMisVisible,
+                    G4Color::Blue(),
+                    STMisSolid,
+                    forceAuxEdgeVisible,
+                    placePV,
+                    doSurfaceCheck
+                    );
       finishNesting(pipeGasUpStrTubInfo,
-                findMaterialOrThrow(pSTMTransportPipeParams.gasMaterial()),
-                0x0,
-                stmMagnetPositionInParent+pipeGasUpStrOffset,
-                parentInfo.logical,
-                0,
-                STMisVisible,
-                G4Color::Blue(),
-                STMisSolid,
-                forceAuxEdgeVisible,
-                placePV,
-                doSurfaceCheck
-                );
+                    findMaterialOrThrow(pSTMTransportPipeParams.gasMaterial()),
+                    0x0,
+                    stmMagnetPositionInParent+pipeGasUpStrOffset,
+                    parentInfo.logical,
+                    0,
+                    STMisVisible,
+                    G4Color::Blue(),
+                    STMisSolid,
+                    forceAuxEdgeVisible,
+                    placePV,
+                    doSurfaceCheck
+                    );
       finishNesting(pipeUpStrWindowTubInfo,
-                findMaterialOrThrow(pSTMTransportPipeParams.upStrWindowMaterial()),
-                0x0,
-                stmMagnetPositionInParent+pipeUpStrWindowOffset,
-                parentInfo.logical,
-                0,
-                STMisVisible,
-                G4Color::Blue(),
-                STMisSolid,
-                forceAuxEdgeVisible,
-                placePV,
-                doSurfaceCheck
-                );
+                    findMaterialOrThrow(pSTMTransportPipeParams.upStrWindowMaterial()),
+                    0x0,
+                    stmMagnetPositionInParent+pipeUpStrWindowOffset,
+                    parentInfo.logical,
+                    0,
+                    STMisVisible,
+                    G4Color::Blue(),
+                    STMisSolid,
+                    forceAuxEdgeVisible,
+                    placePV,
+                    doSurfaceCheck
+                    );
     }
 
 
@@ -562,27 +564,28 @@ namespace mu2e {
     //and in the pipe, and pipe gas, that goes through the magnet
     //Note the local values for the stepper etc...
     //Geant4 should take ownership of the objects created here
-    double stmMagnetFieldZHalfLength = pSTMMagnetParams.zHalfLength();
-    if(pSTMMagnetParams.hasLiner()) stmMagnetFieldZHalfLength -= pSTMShieldPipeParams.linerWidth();
-    const double stmMagnetFieldHalfLengths[3] = {pSTMMagnetParams.xHoleHalfLength(),
-                                                 pSTMMagnetParams.yHoleHalfLength(),
-                                                 stmMagnetFieldZHalfLength};
+    if(pSTMMagnetParams.build()) { //if there is no magnet, don't build a field
+      double stmMagnetFieldZHalfLength = pSTMMagnetParams.zHalfLength();
+      if(pSTMMagnetParams.hasLiner()) stmMagnetFieldZHalfLength -= pSTMShieldPipeParams.linerWidth();
+      const double stmMagnetFieldHalfLengths[3] = {pSTMMagnetParams.xHoleHalfLength(),
+                                                   pSTMMagnetParams.yHoleHalfLength(),
+                                                   stmMagnetFieldZHalfLength};
 
-    VolumeInfo stmMagneticFieldBoxInfo;
-    stmMagneticFieldBoxInfo.name = "stmMagneticField";
+      VolumeInfo stmMagneticFieldBoxInfo;
+      stmMagneticFieldBoxInfo.name = "stmMagneticField";
 
-    // Make another rectangular volume for the magnetic field
-    G4Box* boxField  = new G4Box("boxField",stmMagnetFieldHalfLengths[0],stmMagnetFieldHalfLengths[1],stmMagnetFieldHalfLengths[2]);
+      // Make another rectangular volume for the magnetic field
+      G4Box* boxField  = new G4Box("boxField",stmMagnetFieldHalfLengths[0],stmMagnetFieldHalfLengths[1],stmMagnetFieldHalfLengths[2]);
 
-    G4Tubs* aPipeCenterTubSubt = new G4Tubs( "aPipeCenterTubSubt",
-                                 0.0, //inner radius 0.0 to subtract also the gas region
-                                 pSTMTransportPipeParams.radiusOut()+0.01, //outer radius
-                                 stmMagnetFieldHalfLengths[2]+1.0,// make the subtraction slightly larger to avoid edge effects
-                                 0.0,
-                                 CLHEP::twopi);
+      G4Tubs* aPipeCenterTubSubt = new G4Tubs( "aPipeCenterTubSubt",
+                                               0.0, //inner radius 0.0 to subtract also the gas region
+                                               pSTMTransportPipeParams.radiusOut()+0.01, //outer radius
+                                               stmMagnetFieldHalfLengths[2]+1.0,// make the subtraction slightly larger to avoid edge effects
+                                               0.0,
+                                               CLHEP::twopi);
 
-    if (pSTMMagnetParams.build()){
-      if  (pSTMTransportPipeParams.build()){
+      if (pSTMMagnetParams.build()){
+        if  (pSTMTransportPipeParams.build()){
 
           stmMagneticFieldBoxInfo.solid = new G4SubtractionSolid(stmMagneticFieldBoxInfo.name,boxField,aPipeCenterTubSubt,0,zeroVector);
           finishNesting(stmMagneticFieldBoxInfo,
@@ -597,9 +600,9 @@ namespace mu2e {
                         forceAuxEdgeVisible,
                         placePV,
                         doSurfaceCheck
-                       );
+                        );
 
-      } else {
+        } else {
           stmMagneticFieldBoxInfo = nestBox("stmMagneticField",
                                             stmMagnetFieldHalfLengths,
                                             findMaterialOrThrow(_config.getString("hall.insideMaterialName")),
@@ -613,27 +616,27 @@ namespace mu2e {
                                             forceAuxEdgeVisible,
                                             placePV,
                                             doSurfaceCheck
-                                           );
-      }
+                                            );
+        }
 
-      G4MagneticField        *localMagField        = new G4UniformMagField(G4ThreeVector(pSTMMagnetParams.field()*CLHEP::tesla,0.0,0.0));//This makes negatively charged particles go towards the floor
-      G4Mag_EqRhs            *MagRHS               = new G4Mag_UsualEqRhs(localMagField);
-      G4MagIntegratorStepper *localMagStepper      = new G4ExactHelixStepper(MagRHS); // we use a specialized stepper
-      G4ChordFinder          *localMagChordFinder  = new G4ChordFinder(localMagField,1.0e-2*CLHEP::mm,localMagStepper);
-      G4FieldManager         *localMagFieldManager = new G4FieldManager(localMagField,localMagChordFinder,false);// pure magnetic filed does not change energy
+        G4MagneticField        *localMagField        = new G4UniformMagField(G4ThreeVector(pSTMMagnetParams.field()*CLHEP::tesla,0.0,0.0));//This makes negatively charged particles go towards the floor
+        G4Mag_EqRhs            *MagRHS               = new G4Mag_UsualEqRhs(localMagField);
+        G4MagIntegratorStepper *localMagStepper      = new G4ExactHelixStepper(MagRHS); // we use a specialized stepper
+        G4ChordFinder          *localMagChordFinder  = new G4ChordFinder(localMagField,1.0e-2*CLHEP::mm,localMagStepper);
+        G4FieldManager         *localMagFieldManager = new G4FieldManager(localMagField,localMagChordFinder,false);// pure magnetic filed does not change energy
 
-      stmMagneticFieldBoxInfo.logical->SetFieldManager(localMagFieldManager, true); // last "true" arg propagates field to all volumes it contains
-      if (pSTMTransportPipeParams.build()){
-        pipeCenterTubInfo.logical->SetFieldManager(localMagFieldManager, true); // last "true" arg propagates field to all volumes it contains
-        pipeCenterGasTubInfo.logical->SetFieldManager(localMagFieldManager, true); // last "true" arg propagates field to all volumes it contains
+        stmMagneticFieldBoxInfo.logical->SetFieldManager(localMagFieldManager, true); // last "true" arg propagates field to all volumes it contains
+        if (pSTMTransportPipeParams.build()){
+          pipeCenterTubInfo.logical->SetFieldManager(localMagFieldManager, true); // last "true" arg propagates field to all volumes it contains
+          pipeCenterGasTubInfo.logical->SetFieldManager(localMagFieldManager, true); // last "true" arg propagates field to all volumes it contains
+        }
+        G4UserLimits* mstmMagStepLimit = new G4UserLimits(5.*CLHEP::mm);
+        stmMagneticFieldBoxInfo.logical->SetUserLimits(mstmMagStepLimit);
+        if (pSTMTransportPipeParams.build()){
+          pipeCenterTubInfo.logical->SetUserLimits(mstmMagStepLimit);
+          pipeCenterGasTubInfo.logical->SetUserLimits(mstmMagStepLimit);
+        }
       }
-      G4UserLimits* mstmMagStepLimit = new G4UserLimits(5.*CLHEP::mm);
-      stmMagneticFieldBoxInfo.logical->SetUserLimits(mstmMagStepLimit);
-      if (pSTMTransportPipeParams.build()){
-        pipeCenterTubInfo.logical->SetUserLimits(mstmMagStepLimit);
-        pipeCenterGasTubInfo.logical->SetUserLimits(mstmMagStepLimit);
-      }
-
     }
 
 
@@ -715,7 +718,7 @@ namespace mu2e {
     }
     G4ThreeVector stmFOVCollPositionInParent4 = stmFOVCollPositionInParent1 + G4ThreeVector(0.0,-stmFOVCollHalfHeight2-cornerHeight/2.0, -stmFOVCollHalfLength1-pSTMShieldPipeParams.linerWidth()/2.0);
 
-    if (pSTMFOVCollimatorParams.build()){
+    if (pSTMFOVCollimatorParams.build()){ //bookmark
       finishNesting(collimatorFOV,
                     findMaterialOrThrow(pSTMFOVCollimatorParams.material()),
                     0,
@@ -728,6 +731,9 @@ namespace mu2e {
                     forceAuxEdgeVisible,
                     placePV,
                     doSurfaceCheck);
+                    
+      std::cout << __func__ << ": " << collimatorFOV.name << " center in Mu2e = " << stmFOVCollPositionInParent1 + parentInfo.centerInMu2e() << std::endl; //added
+                    
       if(pSTMFOVCollimatorParams.linerBuild()) {
         finishNesting(collimatorFOVliner,
                       findMaterialOrThrow(pSTMFOVCollimatorParams.linerMaterial()),
@@ -741,6 +747,9 @@ namespace mu2e {
                       forceAuxEdgeVisible,
                       placePV,
                       doSurfaceCheck);
+                      
+        std::cout << __func__ << ": " << collimatorFOVliner.name << " center in Mu2e = " << stmFOVCollPositionInParent2 + parentInfo.centerInMu2e() << std::endl; //added
+                      
         finishNesting(FOVlinerH,
                       findMaterialOrThrow(pSTMFOVCollimatorParams.linerMaterial()),
                       0,
@@ -753,6 +762,8 @@ namespace mu2e {
                       forceAuxEdgeVisible,
                       placePV,
                       doSurfaceCheck);
+                      
+                      std::cout << __func__ << ": " << FOVlinerH.name << " center in Mu2e = " << stmFOVCollPositionInParent3 + parentInfo.centerInMu2e() << std::endl; //added
 
         finishNesting(FOVlinerW,
                       findMaterialOrThrow(pSTMFOVCollimatorParams.linerMaterial()),
@@ -766,6 +777,8 @@ namespace mu2e {
                       forceAuxEdgeVisible,
                       placePV,
                       doSurfaceCheck);
+                      
+                      std::cout << __func__ << ": " << FOVlinerW.name << " center in Mu2e = " << stmFOVCollPositionInParent4 + parentInfo.centerInMu2e() << std::endl; //added
       }
       //build poly plug in FOV collimator if asked for
       if(_config.getBool("stm.FOVcollimator.plug.build", false)) {
@@ -775,11 +788,15 @@ namespace mu2e {
                                         0.,
                                         CLHEP::twopi};
         const double FOVPlugZOffset = stmFOVCollHalfLength1 + _config.getDouble("stm.FOVcollimator.plug.offset") - FOVPlugParams[2];
-        nestTubs("STM_FOVCollimatorPlug",
+        CLHEP::Hep3Vector plugOrigin(0., 0., FOVPlugZOffset); //added
+        plugOrigin += stmFOVCollPositionInParent1; //added
+        //added VolumeInfo polyPlug = 
+        VolumeInfo polyPlug = nestTubs("STM_FOVCollimatorPlug",
                  FOVPlugParams,
                  findMaterialOrThrow(_config.getString("stm.FOVcollimator.plug.material")),
                  0, //no rotation
-                 G4ThreeVector(0., 0., FOVPlugZOffset) + stmFOVCollPositionInParent1,
+                 //G4ThreeVector(0., 0., FOVPlugZOffset) + stmFOVCollPositionInParent1, //removed
+                 plugOrigin, //added
                  parentInfo.logical,
                  0,
                  STMisVisible,
@@ -788,6 +805,7 @@ namespace mu2e {
                  forceAuxEdgeVisible,
                  placePV,
                  doSurfaceCheck);
+        std::cout << __func__ << ": " << polyPlug.name << " center in Mu2e = " << plugOrigin + parentInfo.centerInMu2e() << std::endl; //added
       }
     }
 
@@ -1082,6 +1100,9 @@ namespace mu2e {
                     forceAuxEdgeVisible,
                     placePV,
                     doSurfaceCheck);
+                    
+      std::cout << __func__ << ": " << collimatorSS.name << " center in Mu2e = " << stmSSCollPositionInParent1 + parentInfo.centerInMu2e() << std::endl; //added
+                    
       if (pSTMSSCollimatorParams.linerBuild()){
         finishNesting(collimatorSSliner,
                       findMaterialOrThrow(pSTMSSCollimatorParams.linerMaterial()),
@@ -1132,7 +1153,7 @@ namespace mu2e {
     //CLHEP::HepRotationX RXForLegs(90.0*CLHEP::degree);
     //G4RotationMatrix *rotMatrixXforLegs = reg.add(G4RotationMatrix(RXForLegs));
 
-    if (pSTMDetectorSupportTableParams.build()){
+    if (pSTMDetectorSupportTableParams.build()){ //bookmark
       VolumeInfo mstmDetectorStandInfo = nestBox("mstmDetectorStandPlatform",
                                           stmDetectorSupportTableHalfLengths,
                                           stmDetectorSupportTableMaterial,
@@ -1147,6 +1168,8 @@ namespace mu2e {
                                           placePV,
                                           doSurfaceCheck
                                          );
+                                         
+      std::cout << __func__ << ": " << "mstmDetectorStandPlatform" << " center in Mu2e = " << stmDetectorSupportTablePositionInParent + parentInfo.centerInMu2e() << std::endl; //added
 
       VolumeInfo mstmDetectorStandLeg1Info = nestTubs( "mstmDetectorStandLeg1",
                                               mstmDetectorStandLegParams,
@@ -1527,6 +1550,7 @@ namespace mu2e {
                     forceAuxEdgeVisible,
                     placePV,
                     doSurfaceCheck);
+     std::cout << __func__ << ": " << crvsteelshieldtube.name << " center in Mu2e = " << mstmCRVShieldTubePositionInParent + parentInfo.centerInMu2e() << std::endl; //added
     }
 
   } // end of constructSTM;
