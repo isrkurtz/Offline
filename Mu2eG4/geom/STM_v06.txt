@@ -146,8 +146,8 @@ string stm.shieldingHolePoly.material            = "Polyethylene094";
 bool   stm.FOVcollimator.build                  =  true;
 string stm.FOVcollimator.material               = "G4_Pb";
 double stm.FOVcollimator.UpStrSpace             =    12.7; //12.7; //3.0; //gap between magnet and FOV collimator
-double stm.FOVcollimator.halfWidth              =  177.8; //197.485; // match to the mating block since no magnet
-double stm.FOVcollimator.halfHeight             =  177.8; //247.45;
+double stm.FOVcollimator.halfWidth              =  146.05; //142.875; //177.8; //197.485; // match to the mating block since no magnet
+double stm.FOVcollimator.halfHeight             =  161.925; //177.8; //247.45;
 double stm.FOVcollimator.halfLength             =   63.5;
 bool   stm.FOVcollimator.liner.build            =  false; //remove the poly liner
 string stm.FOVcollimator.liner.material         =  "Polyethylene096";
@@ -156,8 +156,8 @@ double stm.FOVcollimator.liner.halfWidth        =  100.0; //
 double stm.FOVcollimator.liner.halfHeight       =  100.0; //
 double stm.FOVcollimator.liner.halfLength       =   75.0; //
 double stm.FOVcollimator.hole1.xoffset          =    0.0; //
-double stm.FOVcollimator.hole1.radiusUpStr      =   71.0; //make it a cylindrical hole, so both radii are the same
-double stm.FOVcollimator.hole1.radiusDnStr      =   71.0;
+double stm.FOVcollimator.hole1.radiusUpStr      =   70.0; //71.0; //make it a cylindrical hole, so both radii are the same
+double stm.FOVcollimator.hole1.radiusDnStr      =   70.0; //71.0;
 bool   stm.FOVcollimator.hole1.liner.build      =  false; // liner along the length of the hole itself
 double stm.FOVcollimator.hole1.liner.thickness  =    0.0; // no liner
 bool   stm.FOVcollimator.hole2.build            =  false; // has a second collimation hole?
@@ -175,7 +175,7 @@ string stm.FOVcollimator.absorber.material      =  "Polyethylene096";
 // Poly plug in the FOV collimator
 
 bool   stm.FOVcollimator.plug.build      = true;
-double stm.FOVcollimator.plug.radius     = 70.99; //make smaller than the FOVcollimator.hole1 radii
+double stm.FOVcollimator.plug.radius     = 69.99; //70.99; //make smaller than the FOVcollimator.hole1 radii
 double stm.FOVcollimator.plug.halfLength = 50.;
 double stm.FOVcollimator.plug.offset     = 0.; //offset from downstream end of hole
 string stm.FOVcollimator.plug.material   = "Polyethylene094";
@@ -184,13 +184,13 @@ string stm.FOVcollimator.plug.material   = "Polyethylene094";
 // CRV shield pipe + mating block
 
 bool   stm.shield.build                = true;
-double stm.shield.rIn                  = 139.70;
-double stm.shield.rOut                 = 177.80; //171.45;
+double stm.shield.rIn                  = 139.50; //139.70;
+double stm.shield.rOut                 = 177.60; //177.80; //171.45;
 bool   stm.shield.hasLiner             = false; //don't build the poly liner in the CRV shield pipe
 double stm.shield.widthLiner           = 0.0;
 string stm.shield.materialLiner        = "Polyethylene096";
 string stm.shield.material             = "Steel";
-double stm.shield.pipe.halfLength      = 828.50; //833.35; //812.8; //838.2; //254.0;
+double stm.shield.pipe.halfLength      = 888.00; //832.4; //828.50; //833.35; //812.8; //838.2; //254.0;
 bool   stm.shield.matchPipeBlock       = true; //position the mating block based on the pipe position/length
 double stm.shield.DnStrWall.holeRadius = 184.21; //added 10um to prevent an overlap with the shield pipe
 double stm.shield.DnStrWall.halfLength =  0.0000001; //25.40; //DnStrWall = mating block between CRV shield pipe and the magnet
